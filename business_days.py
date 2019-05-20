@@ -42,26 +42,27 @@ def _process_line(line):
     return _Holiday(parts[0], parts[1], parts[2])
 
 def is_business_day(date):
-    if not _check_year(date.year):
-        _load_holidays_for_year(date.year)
+    _check_and_update(date.year)
+
     return date not in __recurring and date.weekday() < 5
 
 def get_business_days(start_date, end_date=dt.datetime.today()):
-    if not _check_year(start_date.year):
-        _load_holidays_for_year(start_date.year)
+    _check_and_update(start_date.year)
+    _check_and_update(end_date.year)
 
-    if not _check_year(end_date.year):
-        _load_holidays_for_year(end_date.year)
     return {start_date + dt.timedelta(s) for s in range((end_date - start_date).days + 1) if (start_date + dt.timedelta(s)).weekday() < 5} - __recurring
 
 def get_holiday_dates(year=dt.datetime.today().year):
-    if not _check_year(year):
-        _load_holidays_for_year(year)
+    _check_and_update(year)
 
     return {h.get_value(year) for h in __holidays}
 
 def _check_year(year):
     return year >= __min_year and year <= __max_year
+
+def _check_and_update(year):
+    if not _check_year(year):
+        _load_holidays_for_year(year)
 
 def _load_holidays_for_year(year):
     global __min_year
@@ -83,10 +84,3 @@ __min_year = dt.datetime.today().year
 __max_year = __min_year
 
 _load_holidays_for_year(dt.datetime.today().year)
-
-print(is_business_day(dt.datetime.strptime('20251225','%Y%m%d')))
-
-l = list(get_business_days(dt.datetime.strptime('20180501', '%Y%m%d')))
-l.sort()
-for r in l:
-    print(r)
