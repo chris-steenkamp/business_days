@@ -57,6 +57,16 @@ def get_holiday_dates(year=dt.datetime.today().year):
 
     return {h.get_value(year) for h in __holidays}
 
+def get_previous_business_day(date_val=dt.date.today()):
+    prev_day = date_val
+    while True:
+        prev_day -= dt.timedelta(1)
+
+        if is_business_day(prev_day):
+            break
+
+    return prev_day
+
 def _check_year(year):
     return year >= __min_year and year <= __max_year
 
