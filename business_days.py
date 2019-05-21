@@ -20,28 +20,38 @@ class _Holiday(object):
     def get_type_cd(self):
         return self.__type_cd
 
-    def get_value(self, year=dt.datetime.today().year):
+    def get_effective_date(self, year=dt.datetime.today().year):
+        return self.__get_date(year, True)
+
+    def get_actual_date(self, year=dt.datetime.today().year):
+        return self.__get_date(year)
+
+    def __get_date(self, year, effective=False):
         if self.__type_cd == 'ONCE':
-            return dt.datetime.strptime(self.__value, '%Y%m%d')
+            date = dt.datetime.strptime(self.__value, '%Y%m%d')
         elif self.__type_cd == 'RECUR':
             date = dt.datetime.strptime(f'{year}{self.__value}', '%Y%m%d')
+        else:
+            date = dt.datetime.strptime(f'{year}0101', '%Y%m%d')
+
+        if effective:
             if date.weekday() == 6:
                 date = date + dt.timedelta(1)
-            return date
-        else:
-            return dt.datetime.strptime(f'{year}0101', '%Y%m%d')
+
+        return date
 
     def __lt__(self, value):
-        return self.get_value() < value.get_value()
+        return self.get_actual_date() < value.get_actual_date()
 
     def __eq__(self, value):
-        return self.get_value() == value.get_value()
+        return self.get_effective_date() == value.get_effective_date()
 
 
 def _process_line(line):
     parts = line.split(',')
 
     return _Holiday(parts[0], parts[1], parts[2])
+
 
 def is_business_day(date):
     _check_and_update(date.year)
@@ -58,7 +68,12 @@ def get_business_days(start_date, end_date=dt.datetime.today()):
 def get_holiday_dates(year=dt.datetime.today().year):
     _check_and_update(year)
 
-    return {h.get_value(year) for h in __holidays}
+    return {h.get_actual_date(year) for h in __holidays if h.get_actual_date(year).year == year}
+
+def get_holiday_effective_dates(year=dt.datetime.today().year):
+    _check_and_update(year)
+
+    return {h.get_effective_date(year) for h in __holidays if h.get_effective_date(year).year == year}
 
 @singledispatch
 def get_previous_business_day(date_val=dt.date.today(), *args):
