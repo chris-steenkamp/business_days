@@ -20,6 +20,9 @@ class _Holiday(object):
     def get_type_cd(self):
         return self.__type_cd
 
+    def get_name(self):
+        return self.__name
+
     def get_effective_date(self, year=dt.datetime.today().year):
         return self.__get_date(year, True)
 
@@ -57,17 +60,31 @@ def get_business_days(start_date, end_date=dt.datetime.today()):
     _check_and_update(start_date.year)
     _check_and_update(end_date.year)
 
-    return {start_date + dt.timedelta(s) for s in range((end_date - start_date).days + 1) if (start_date + dt.timedelta(s)).weekday() < 5} - __cache
+    dates = list({start_date + dt.timedelta(s) for s in range((end_date - start_date).days + 1)
+                  if (start_date + dt.timedelta(s)).weekday() < 5} - __cache)
+    dates.sort()
 
-def get_holiday_dates(year=dt.datetime.today().year):
+    return dates
+
+
+def get_holidays(year=dt.datetime.today().year):
     _check_and_update(year)
 
-    return {h.get_actual_date(year) for h in __holidays if h.get_actual_date(year).year == year}
+    holidays = list({(h.get_actual_date(year), h.get_name())
+                     for h in __holidays if h.get_actual_date(year).year == year})
+    holidays.sort()
+    return holidays
+
 
 def get_holiday_effective_dates(year=dt.datetime.today().year):
     _check_and_update(year)
 
-    return {h.get_effective_date(year) for h in __holidays if h.get_effective_date(year).year == year}
+    dates = list({h.get_effective_date(year)
+                  for h in __holidays if h.get_effective_date(year).year == year})
+    dates.sort()
+
+    return dates
+
 
 @singledispatch
 def get_previous_business_day(date_val=dt.date.today(), *args):
