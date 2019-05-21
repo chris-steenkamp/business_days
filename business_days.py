@@ -121,11 +121,10 @@ def _load_holidays_for_year(year):
         for h in [h for h in __holidays]:
             __cache.add(h.get_effective_date(__min_year + i))
 
+
 with open('public_holidays.csv', 'r') as f:
     f.readline()
     __holidays = [_process_line(l.strip()) for l in f.readlines() if l.strip()]
-
-__holidays.sort()
 
 __min_year = dt.datetime.today().year
 __max_year = __min_year
