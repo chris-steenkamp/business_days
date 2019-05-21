@@ -2,10 +2,11 @@ import datetime as dt
 from functools import singledispatch
 
 __holidays = {}
-__recurring = set()
+__cache = set()
 
 __min_year = None
 __max_year = None
+
 
 class _Holiday(object):
     def __init__(self, name, type_cd, value):
@@ -45,13 +46,14 @@ def _process_line(line):
 def is_business_day(date):
     _check_and_update(date.year)
 
-    return date not in __recurring and date.weekday() < 5
+    return date not in __cache and date.weekday() < 5
+
 
 def get_business_days(start_date, end_date=dt.datetime.today()):
     _check_and_update(start_date.year)
     _check_and_update(end_date.year)
 
-    return {start_date + dt.timedelta(s) for s in range((end_date - start_date).days + 1) if (start_date + dt.timedelta(s)).weekday() < 5} - __recurring
+    return {start_date + dt.timedelta(s) for s in range((end_date - start_date).days + 1) if (start_date + dt.timedelta(s)).weekday() < 5} - __cache
 
 def get_holiday_dates(year=dt.datetime.today().year):
     _check_and_update(year)
@@ -78,9 +80,11 @@ def _get_prev_business_day_str(date_val, date_fmt='%Y%m%d'):
 def _check_year(year):
     return year >= __min_year and year <= __max_year
 
+
 def _check_and_update(year):
     if not _check_year(year):
         _load_holidays_for_year(year)
+
 
 def _load_holidays_for_year(year):
     global __min_year
@@ -89,8 +93,7 @@ def _load_holidays_for_year(year):
     __max_year = max(year, __max_year)
     for i in range(__max_year - __min_year + 1):
         for h in [h for h in __holidays]:
-            __recurring.add(h.get_value(__min_year + i))
-    
+            __cache.add(h.get_effective_date(__min_year + i))
 
 with open('public_holidays.csv', 'r') as f:
     f.readline()
