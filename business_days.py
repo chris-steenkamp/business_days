@@ -40,12 +40,6 @@ class _Holiday(object):
 
         return date
 
-    def __lt__(self, value):
-        return self.get_actual_date() < value.get_actual_date()
-
-    def __eq__(self, value):
-        return self.get_effective_date() == value.get_effective_date()
-
 
 def _process_line(line):
     parts = line.split(',')
