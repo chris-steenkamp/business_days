@@ -85,9 +85,11 @@ def get_holiday_effective_dates(year=dt.datetime.today().year):
 
     return dates
 
+def get_previous_business_day(date_val=dt.date.today(), *args):
+    return __get_previous_business_day_date(date_val, args)
 
 @singledispatch
-def get_previous_business_day(date_val=dt.date.today(), *args):
+def __get_previous_business_day_date(date_val, *args):
     prev_day = date_val
     while True:
         prev_day -= dt.timedelta(1)
@@ -98,9 +100,14 @@ def get_previous_business_day(date_val=dt.date.today(), *args):
     return prev_day
 
 
-@get_previous_business_day.register(str)
-def _get_prev_business_day_str(date_val, date_fmt='%Y%m%d'):
-    return get_previous_business_day(dt.datetime.strptime(date_val, date_fmt)).strftime(date_fmt)
+@__get_previous_business_day_date.register(str)
+def _get_previous_business_day_str(date_val, *args):
+    if len(args) and len(args[0]):
+        date_fmt = args[0][0]
+    else:
+        date_fmt = '%Y-%m-%d'
+
+    return __get_previous_business_day_date(dt.datetime.strptime(date_val, date_fmt)).strftime(date_fmt)
 
 
 def _check_year(year):
