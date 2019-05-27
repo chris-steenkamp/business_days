@@ -9,6 +9,16 @@ __max_year = None
 
 
 class _Holiday(object):
+    '''Container for public holiday meta information.
+
+    Most holidays recur on the same day every year so these
+    only require the month and day. Once-off holidays occur
+    at a fixed point in time so they require the exact date
+    to be specified. The exact date of other holidays (such
+    as Easter) is based on a formula and will differ each
+    year. These types of holidays can be specified either as
+    once-off holidays or by specfiying actual the formula.
+    '''
     def __init__(self, name, type_cd, value):
         self.__name = name
         self.__type_cd = type_cd
@@ -24,12 +34,18 @@ class _Holiday(object):
         return self.__name
 
     def get_effective_date(self, year=dt.datetime.today().year):
+        '''Get the effective date of the holiday (adjusted if the actual date
+        falls on Sunday).
+        '''
         return self.__get_date(year, True)
 
     def get_actual_date(self, year=dt.datetime.today().year):
+        '''Get the actual date of the holiday, as specified in the source file.'''
         return self.__get_date(year)
 
     def __get_date(self, year, effective=False):
+        '''Get the date of the holiday, optionally adjusted to reflect the
+        effective date, if the actual date falls on a Sunday.'''
         if self.__type_cd == 'ONCE':
             date = dt.datetime.strptime(self.__value, '%Y%m%d')
         elif self.__type_cd == 'RECUR':
@@ -44,21 +60,20 @@ class _Holiday(object):
         return date
 
 
-def _process_line(line):
-    parts = line.split(',')
-
-    return _Holiday(parts[0], parts[1], parts[2])
-
-
 def is_business_day(date):
-    _check_and_update(date.year)
+    '''Return true if the given date is a valid business day.'''
+    __check_and_update(date.year)
 
     return date not in __cache and date.weekday() < 5
 
 
 def get_business_days(start_date, end_date=dt.datetime.today()):
-    _check_and_update(start_date.year)
-    _check_and_update(end_date.year)
+    '''Gets the list of business days between to dates (inclusive).
+
+    The end date defaults to the current day.
+    '''
+    __check_and_update(start_date.year)
+    __check_and_update(end_date.year)
 
     dates = list({start_date + dt.timedelta(s) for s in range((end_date - start_date).days + 1)
                   if (start_date + dt.timedelta(s)).weekday() < 5} - __cache)
@@ -68,7 +83,11 @@ def get_business_days(start_date, end_date=dt.datetime.today()):
 
 
 def get_holidays(year=dt.datetime.today().year):
-    _check_and_update(year)
+    '''Return the list of named holidays and their corresponding dates.
+
+    Defaults to the list of holidays for the current year.
+    '''
+    __check_and_update(year)
 
     holidays = list({(h.get_actual_date(year), h.get_name())
                      for h in __holidays if h.get_actual_date(year).year == year})
@@ -77,7 +96,14 @@ def get_holidays(year=dt.datetime.today().year):
 
 
 def get_holiday_effective_dates(year=dt.datetime.today().year):
-    _check_and_update(year)
+    '''Get the list of effective public holiday dates for the given year.
+
+    Defaults to the list of holidays for the current year.
+
+    The effective date can differ if the public holiday falls on a Sunday,
+    where the following Monday is then given as the holiday date.
+    '''
+    __check_and_update(year)
 
     dates = list({h.get_effective_date(year)
                   for h in __holidays if h.get_effective_date(year).year == year})
@@ -85,9 +111,21 @@ def get_holiday_effective_dates(year=dt.datetime.today().year):
 
     return dates
 
+def get_previous_business_day(date_val=dt.date.today(), *args):
+    '''Return business day prior to the date specified. 
+
+    If called without args then returns the date of the most recent
+    business day.
+
+    The date_val can be either a datetime/date object or a string.
+    If date_val is a string, then you can optionally pass the format
+    string as the second parameter (default is ISO 8601 %Y-%m-%d).
+    '''
+    return __get_previous_business_day_date(date_val, args)
 
 @singledispatch
-def get_previous_business_day(date_val=dt.date.today(), *args):
+def __get_previous_business_day_date(date_val, *args):
+    '''Internal method to handle date/datetime objects.'''
     prev_day = date_val
     while True:
         prev_day -= dt.timedelta(1)
@@ -98,21 +136,30 @@ def get_previous_business_day(date_val=dt.date.today(), *args):
     return prev_day
 
 
-@get_previous_business_day.register(str)
-def _get_prev_business_day_str(date_val, date_fmt='%Y%m%d'):
-    return get_previous_business_day(dt.datetime.strptime(date_val, date_fmt)).strftime(date_fmt)
+@__get_previous_business_day_date.register(str)
+def _get_previous_business_day_str(date_val, *args):
+    '''Internal method to handle dates passed as a string.'''
+    if len(args) and len(args[0]):
+        date_fmt = args[0][0]
+    else:
+        date_fmt = '%Y-%m-%d'
+
+    return __get_previous_business_day_date(dt.datetime.strptime(date_val, date_fmt)).strftime(date_fmt)
 
 
-def _check_year(year):
+def __check_year(year):
+    '''Check whether the given year in is within cached range.'''
     return year >= __min_year and year <= __max_year
 
 
-def _check_and_update(year):
-    if not _check_year(year):
-        _load_holidays_for_year(year)
+def __check_and_update(year):
+    '''Load holidays for year into cache if given year is not within cached range.'''
+    if not __check_year(year):
+        __load_holidays_for_year(year)
 
 
-def _load_holidays_for_year(year):
+def __load_holidays_for_year(year):
+    '''Load holidays for year into cache.'''
     global __min_year
     __min_year = min(year, __min_year)
     global __max_year
@@ -122,11 +169,16 @@ def _load_holidays_for_year(year):
             __cache.add(h.get_effective_date(__min_year + i))
 
 
+def __process_line(line):
+    parts = line.split(',')
+
+    return _Holiday(parts[0], parts[1], parts[2])
+
 with open('public_holidays.csv', 'r') as f:
     f.readline()
-    __holidays = [_process_line(l.strip()) for l in f.readlines() if l.strip()]
+    __holidays = [__process_line(l.strip()) for l in f.readlines() if l.strip()]
 
 __min_year = dt.datetime.today().year
 __max_year = __min_year
 
-_load_holidays_for_year(dt.datetime.today().year)
+__load_holidays_for_year(dt.datetime.today().year)
