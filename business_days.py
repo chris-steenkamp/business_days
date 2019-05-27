@@ -1,12 +1,13 @@
 import datetime as dt
 from functools import singledispatch
+from locale import getdefaultlocale
 
 __holidays = {}
 __cache = set()
 
 __min_year = None
 __max_year = None
-
+__current_locale = None
 
 class _Holiday(object):
     '''Container for public holiday meta information.
@@ -19,19 +20,23 @@ class _Holiday(object):
     year. These types of holidays can be specified either as
     once-off holidays or by specfiying actual the formula.
     '''
-    def __init__(self, name, type_cd, value):
+    def __init__(self, name, type_cd, value, locale):
         self.__name = name
         self.__type_cd = type_cd
         self.__value = value
+        self.__locale = locale
 
     def __str__(self):
-        return f'{self.__name} with type code {self.__type_cd} with value {self.__value}'
+        return f'{self.__locale} - {self.__name} with type code {self.__type_cd} with value {self.__value}'
 
     def get_type_cd(self):
         return self.__type_cd
 
     def get_name(self):
         return self.__name
+
+    def get_locale(self):
+        return self.__locale
 
     def get_effective_date(self, year=dt.datetime.today().year):
         '''Get the effective date of the holiday (adjusted if the actual date
@@ -90,7 +95,7 @@ def get_holidays(year=dt.datetime.today().year):
     __check_and_update(year)
 
     holidays = list({(h.get_actual_date(year), h.get_name())
-                     for h in __holidays if h.get_actual_date(year).year == year})
+                     for h in __holidays if h.get_actual_date(year).year == year and h.get_locale() == __current_locale})
     holidays.sort()
     return holidays
 
@@ -106,7 +111,7 @@ def get_holiday_effective_dates(year=dt.datetime.today().year):
     __check_and_update(year)
 
     dates = list({h.get_effective_date(year)
-                  for h in __holidays if h.get_effective_date(year).year == year})
+                  for h in __holidays if h.get_effective_date(year).year == year and h.get_locale() == __current_locale})
     dates.sort()
 
     return dates
@@ -165,20 +170,36 @@ def __load_holidays_for_year(year):
     global __max_year
     __max_year = max(year, __max_year)
     for i in range(__max_year - __min_year + 1):
-        for h in [h for h in __holidays]:
+        for h in [h for h in __holidays if h.get_locale() == __current_locale]:
             __cache.add(h.get_effective_date(__min_year + i))
 
 
 def __process_line(line):
     parts = line.split(',')
 
-    return _Holiday(parts[0], parts[1], parts[2])
+    return _Holiday(parts[0], parts[1], parts[2], parts[3])
 
-with open('public_holidays.csv', 'r') as f:
-    f.readline()
-    __holidays = [__process_line(l.strip()) for l in f.readlines() if l.strip()]
+def init(locale=getdefaultlocale()[0], year=dt.datetime.today().year):
+    '''Initialize list of holidays for the specified year and locale'''
+    global __holidays
+    global __min_year
+    global __max_year
+    global __current_locale
 
-__min_year = dt.datetime.today().year
-__max_year = __min_year
+    __min_year = year
+    __max_year = __min_year
+    __current_locale = locale
 
-__load_holidays_for_year(dt.datetime.today().year)
+    __holidays.clear()
+    __cache.clear()
+
+    with open('public_holidays.csv', 'r') as f:
+        f.readline()
+        __holidays = [__process_line(l.strip())
+                      for l in f.readlines() if l.strip()]
+
+    __load_holidays_for_year(dt.datetime.today().year)
+
+
+'''Initialize default values when importing the business_days module'''
+init()
