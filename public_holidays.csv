@@ -1,16 +1,15 @@
-﻿NAME,TYPE_CD,VALUE
-New Year’s Day,RECUR,0101
+﻿NAME,TYPE_CD,VALUE,CULTURE_CD
+New Year's Day,RECUR,0101
 Human Rights Day,RECUR,0321
-Good Friday,FUNC,TBA
-Family Day,FUNC,TBA
 Freedom Day,RECUR,0427
 Workers' Day,RECUR,0501
 Youth Day,RECUR,0616
-National Women’s Day,RECUR,0809
-Public holiday,RECUR,0810
+National Women's Day,RECUR,0809
 Heritage Day,RECUR,0924
 Day of Reconciliation,RECUR,1216
 Christmas Day,RECUR,1225
 Day of Goodwill,RECUR,1226
-Elections (as proclaimed in Government Gazette 42250 of 26 February 2019),ONCE,20190508
-Easter Sunday,FUNC,TBA
+Elections (as proclaimed in Government Gazette 42250 of 26 February 2019),ONCE,20190508
+Good Friday,ONCE,20190419
+Easter Sunday,ONCE,20190421
+Family Day,ONCE,20190422
